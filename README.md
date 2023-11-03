@@ -4,7 +4,7 @@ A shiny app for running the decona pipeline through a GUI
 ## Installation
 Pull the github repository
 ```
-git clone 
+git clone https://github.com/ehill-iolani/decona-gui.git
 ```
 Build the docker image
 ```
