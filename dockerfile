@@ -13,6 +13,15 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt update
 RUN apt install -y curl git g++ zlib1g-dev make bsdmainutils gawk bcftools libopenblas-base wget nano
 
+# Install R packages
+RUN R -e "install.packages(c('shinyFiles', 'shinycssloaders', 'stringr', 'dplyr'))"
+
+# Copy the app to the image
+RUN rm -r /srv/shiny-server/*
+RUN git clone https://github.com/ehill-iolani/decona-gui.git
+RUN cp -r decona-gui/* /srv/shiny-server/
+RUN rm -r decona-gui
+
 # Conda/Mamba installation
 RUN cd tmp
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh --output miniconda.sh
@@ -32,7 +41,7 @@ SHELL ["mamba", "run", "-n", "decona", "/bin/bash", "-c"]
 RUN conda init && \
     conda install -y -c bioconda blast=2.11.0 && \
     conda install -y pandas=1.4.1 && \
-    echo "conda activate decona" >> ~/.bashrc && \
+    echo "mamba activate decona" >> ~/.bashrc && \
     mkdir /home/data
 
 # Clean up installation

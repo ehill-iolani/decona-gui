@@ -1,6 +1,8 @@
 library(shiny)
 library(shinyFiles)
 library(shinycssloaders)
+library(stringr)
+library(dplyr)
 
 # Define accessory fucnction
 # Checks if an integer is of 0 length
@@ -14,8 +16,8 @@ ui <- shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       helpText("Select a directory where the barcode directories containing the fastq or fastq.gz files are located"),
-      shinyDirButton("dir", "Input directory", "Upload"),
-      verbatimTextOutput("dir", placeholder = TRUE),
+      fileInput("fastqs", "Input fastq file directories", accept = c("/"), multiple = TRUE),
+      #verbatimTextOutput("dir", placeholder = TRUE),
       fileInput("database", "Upload database .fasta file", accept = c("fasta")),
       numericInput("lowerlength", "Minimum amplicon length", value = 170),
       numericInput("upperlength", "Maximum amplicon length", value = 230),
@@ -32,59 +34,43 @@ ui <- shinyUI(fluidPage(
 
 # Server setup
 server <- function(input, output) {
-  # Parses the input directory
-  shinyDirChoose(
-    input,
-    "dir",
-    roots = c(home = "~")
-    #debatable if we want to allow the user to select the file type....
-    #i think im just gonna assume theyre not braindead and can
-    #read the documenaion to see what file types are allowed
-    #filetypes = c("fastq", "fastq.gz")
-  )
-
-  # Creates a reactive value for the input directory
-  global <- reactiveValues(datapath = getwd())
-  dir <- reactive(input$dir)
-
-  # Outputs the input directory path
-  output$dir <- renderText({
-    global$datapath
-  })
-
-  # Updates the input directory path
-  observeEvent(ignoreNULL = TRUE,
-               eventExpr = {
-                 input$dir
-               },
-               handlerExpr = {
-                 if (!"path" %in% names(dir())) return()
-                 home <- normalizePath("~")
-                 global$datapath <-
-                   file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
-               })
-
   # When the run button is clicked, execute decona
   observeEvent(input$run, {
     showModal(modalDialog("Running the Decona pipeline, please be patient...", footer = NULL))
-    files <- list.files(global$datapath)
+
+    # Set large upload size limit (server side)
+    options(shiny.maxRequestSize = 70 * 1024^2)
 
     # Make a directory to store input files
-    dir.create(file.path(global$datapath, "processing"))
+    dir.create(file.path("./processing"))
+
+    # Make a directory for each barcode
+    files <- input$fastqs$name
+    bc_names <- str_extract_all(input$fastqs$name, "barcode[0-9]+") %>% unique()
+    bc_names <- unlist(bc_names)
+    for (i in seq_along(bc_names)) {
+      dir.create(file.path("./processing", bc_names[i]))
+    }
+
+    # Write fastq files to their respective barcode directories
+    for (i in seq_along(bc_names)) {
+      bucket <- which(str_detect(files, bc_names[i]))
+      file.copy(input$fastqs$datapath[bucket], file.path("./processing", bc_names[i]))
+    }
+
     # Move the database file to the input directory
-    file.copy(input$database$datapath, file.path(global$datapath, "processing"))
-    # Move the fastq files to the input directory
-    file.copy(file.path(global$datapath, files), file.path(global$datapath, "processing"), recursive = TRUE)
+    file.copy(input$database$datapath, file.path("./", "processing"))
 
     ### IMPORTANT: THIS WILL NEED TO BE CHANGED WHEN DEPLOYED B/C IT WILL ALL BE CONTAINED IN THE DOCKER IMAGE
     # prep the docker command
-    docker_command <- paste0("docker run --name=decona_app ", "-v ", global$datapath, "/processing/", ":/home/data ", "decona:dev")
+    docker_command <- paste0("docker run --name=decona_app ", "-v ", getwd(),"/processing/", ":/home/data ", "decona:dev")
 
     # prep the decona command
-    decona_command <- paste0("decona -f -l ", input$lowerlength, " -m ", input$upperlength, " -q ", input$quality, " -c ", input$clusterid, " -n ", input$minclustersize, " -k ", input$kmer, " -T ", input$threads, " -B 0.fasta")
+    decona_command <- paste0("mamba run -n decona decona -f -l ", input$lowerlength, " -m ", input$upperlength, " -q ", input$quality, " -c ", input$clusterid, " -n ", input$minclustersize, " -k ", input$kmer, " -T ", input$threads, " -B 0.fasta")
 
     # combine the docker and decona commands
     command <- paste(docker_command, decona_command)
+    #command <- paste(decona_command)
 
     # run the decona pipeline
     system(command, intern = TRUE)
@@ -95,7 +81,7 @@ server <- function(input, output) {
     # Display the BLAST results of the cluters
     output$results <- renderPrint({
       # Read in the raw text output
-      dat <- read.delim(file.path(global$datapath, "processing/result/Racon", "summary_BLAST_out_racon_clusters_barcode01_concatenated.txt"), sep = "\t", header = FALSE, skip = 1, col.names = paste0("V",seq_len(100)), fill = TRUE)
+      dat <- read.delim(file.path("./processing/result/Racon", "summary_BLAST_out_racon_clusters_barcode01_concatenated.txt"), sep = "\t", header = FALSE, skip = 1, col.names = paste0("V",seq_len(100)), fill = TRUE)
       check <- grep("TRUE", is.na(dat$V1))
 
       # If there are no clusters, return an empty data frame
