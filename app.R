@@ -1,6 +1,6 @@
 library(shiny)
-library(shinyFiles)
-library(shinycssloaders)
+library(plotly)
+library(ggplot2)
 library(stringr)
 library(dplyr)
 
@@ -19,15 +19,15 @@ ui <- shinyUI(fluidPage(
       fileInput("fastqs", "Input fastq file directories", accept = c("/"), multiple = TRUE),
       fileInput("database", "Upload database .fasta file", accept = c("fasta")),
       numericInput("lowerlength", "Minimum amplicon length", value = 170),
-      numericInput("upperlength", "Maximum amplicon length", value = 230),
+      numericInput("upperlength", "Maximum amplicon length", value = 300),
       numericInput("quality", "Minimum Quality Score", value = 10),
       numericInput("clusterid", "Cluster Percent Identity", value = 0.95),
-      numericInput("minclustersize", "Minimum Cluster Size", value = 5),
+      numericInput("minclustersize", "Minimum Cluster Size", value = 10),
       numericInput("kmer", "Kmer-length", value = 10),
       numericInput("threads", "Threads", value = 2),
       actionButton("run", "Run Decona!")),
     mainPanel(
-      verbatimTextOutput("results"))
+      plotlyOutput("results"))
   )
 ))
 
@@ -72,23 +72,65 @@ server <- function(input, output) {
     # run the decona pipeline
     system(command, intern = TRUE)
 
-    # Display the BLAST results of the cluters
-    output$results <- renderPrint({
-      # Read in the raw text output
-      dat <- read.delim(file.path("/home/processing/result/Racon", "summary_BLAST_out_racon_clusters_barcode01_concatenated.txt"), sep = "\t", header = FALSE, skip = 1, col.names = paste0("V",seq_len(100)), fill = TRUE)
+    # Processes results
+    # Detect how many barcodes were processed
+    decona_out <- list.files("/home/processing/result/Racon")
+    blast_out <- decona_out[grep("summary_BLAST", decona_out)]
+
+    # Prep the data frame
+    sdat <- data.frame()
+
+    # Read in the raw text output
+    for (i in blast_out) {
+      dat <- read.delim(file.path("/home/processing/result/Racon", i), sep = "\t", header = FALSE, skip = 1, col.names = paste0("V",seq_len(100)), fill = TRUE)
       check <- grep("TRUE", is.na(dat$V1))
 
       # If there are no clusters, return an empty data frame
       if(is.integer0(check) == TRUE) {
-        sdat <- dat[, c(1, 4, 8, 11, 12)]
+        temp <- dat[, c(1, 4, 8, 11, 12)]
       } else {
         dat <- dat[-c(grep("TRUE", is.na(dat$V1))), ]
-        sdat <- dat[, c(1, 4, 8, 11, 12)]}
+        temp <- dat[, c(1, 4, 8, 11, 12)]}
 
       # Rename the columns
-      names(sdat) <- c("reads", "percent_id", "e_value", "genus", "species")
-      sdat$percent_id[grep("TRUE", is.na(sdat$percent_id))] <- 0
-      sdat
+      names(temp) <- c("reads", "percent_id", "e_value", "genus", "species")
+      temp$percent_id[grep("TRUE", is.na(temp$percent_id))] <- 0
+
+      # Add column for gensp
+      temp$gensp <- paste(temp$genus, temp$species, sep = "_")
+
+      # Add column for barcode
+      temp$barcode <- str_extract(i, "barcode[0-9]+")
+
+      # Add to the data frame
+      sdat <- rbind(sdat, temp)
+    }
+
+    # Replace NA with unclassified
+    sdat$gensp[is.na(sdat$e_value)] <- "unclassified"
+
+    # Summarize reads per species
+    condense <- sdat %>%
+      group_by(barcode, gensp) %>%
+      summarise(reads = sum(reads)) %>%
+      arrange(desc(reads)) %>%
+      mutate(gensp = factor(gensp, levels = unique(gensp)))
+
+    # Calculate the relative abundance per unique barcode
+    condense$rel_abund <- "fill"
+    for (i in unique(condense$barcode)) {
+      condense$rel_abund[condense$barcode == i] <- condense$reads[condense$barcode == i] / sum(condense$reads[condense$barcode == i])
+    }
+
+    # Make rel_abund numeric
+    condense$rel_abund <- as.numeric(condense$rel_abund)
+
+    # Display the results
+    output$results <- renderPlotly({
+      ggplotly(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
+                 geom_bar(stat = "identity") +
+                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
     })
 
     removeModal()
