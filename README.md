@@ -14,3 +14,4 @@ Run the docker image as a container
 ```
 docker run --name=decona-gui --rm -d -p 8080:3838 decona-gui:latest
 ```
+Once the docker container is build, naavigate to http://localhost:8080/ in your browser to access the app.
