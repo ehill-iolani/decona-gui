@@ -1,4 +1,5 @@
 # Set the base image; pretty sure rocker/shiny was built on Ubuntu 22.04 jammy
+# not gamer, but fixing chip erra erra (like a dj), on arm devices like mac with m1/2 cheetos
 FROM --platform=linux/amd64 rocker/shiny    
 
 # My authorship
