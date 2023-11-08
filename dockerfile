@@ -1,5 +1,5 @@
 # Set the base image; pretty sure rocker/shiny was built on Ubuntu 22.04 jammy
-FROM rocker/shiny
+FROM --platform=linux/amd64 rocker/shiny    
 
 # My authorship
 LABEL maintainer="ehill@iolani.org"
