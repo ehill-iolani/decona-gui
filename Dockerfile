@@ -39,9 +39,9 @@ RUN bash /home/github/decona/install/install.sh
 SHELL ["mamba", "run", "-n", "decona", "/bin/bash", "-c"]
 
 # Install decona_plus
-RUN conda init && \
-    conda install -y -c bioconda blast=2.11.0 && \
-    conda install -y pandas=1.4.1 && \
+RUN mamba init && \
+    mamba install -y -c bioconda blast=2.11.0 && \
+    mamba install -y pandas=1.4.1 && \
     echo "mamba activate decona" >> ~/.bashrc && \
     mkdir /home/data
 
