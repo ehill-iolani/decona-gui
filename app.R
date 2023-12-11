@@ -7,6 +7,11 @@ library(shinydashboard)
 library(shinyalert)
 library(DT)
 
+# Accessory function to checks if an integer is of 0 length
+is.integer0 <- function(x){
+  is.integer(x) && length(x) == 0L
+}
+
 ui <- dashboardPage(
   dashboardHeader(title = "AIN Decona GUI"),
   dashboardSidebar(sidebarMenu(
@@ -21,7 +26,7 @@ ui <- dashboardPage(
             fluidRow(
             box(
               title = "File Upload", status = "primary", solidHeader = TRUE, width = 12,
-              fileInput("fastqs", "Input fastq file directories", accept = c("/"), multiple = TRUE),
+              fileInput("fastqs", "Input fastq file directories", accept = c("fastq", "fastq.gz"), multiple = TRUE),
               fileInput("database", "Upload database .fasta file", accept = c("fasta")),
               numericInput("lowerlength", "Minimum amplicon length", value = 170),
               numericInput("upperlength", "Maximum amplicon length", value = 300),
@@ -44,7 +49,7 @@ ui <- dashboardPage(
                 status = "primary",
                 solidHeader = TRUE,
                 width = 12,
-                plotlyOutput("relabresults"),
+                plotlyOutput("relabres"),
                 downloadButton("downloadfig", "Download Relative Abundance Plot")))),
     tabItem(tabName = "blastres",
             fluidRow(
@@ -71,7 +76,7 @@ server <- shinyServer(function(input, output) {
   # Set large upload size limit (server side)
   options(shiny.maxRequestSize = 70 * 1024^2)
 
-  # When the run button is clicked, execute decona
+  # EXECUTE DECONA CLASSIFIER + VISUALIZER
   observeEvent(input$run, {
     showModal(modalDialog("Running the Decona pipeline, please be patient...", footer = NULL))
 
@@ -92,20 +97,19 @@ server <- shinyServer(function(input, output) {
       file.copy(input$fastqs$datapath[bucket], file.path("/home/processing", bc_names[i]))
     }
 
+    # Check if the files are fastq or fastq.gz; unzip if necessary
+    setwd("/home/processing")
+    if(any(str_detect(files, ".gz"))) {
+      system("gunzip barcode*/*.gz")
+      system("for i in */; do cd $i; for j in *; do mv $j ${j}.fastq; done; cd ..; done")
+    }
+
     # Move the database file to the input directory
     file.copy(input$database$datapath, file.path("/home/processing"))
 
-    # Set the temporary working directory
-    setwd("/home/processing")
-
-    # prep the decona command
+    # prep command and execute pipeline
     decona_command <- paste0("conda run -n decona decona -f -l ", input$lowerlength, " -m ", input$upperlength, " -q ", input$quality, " -c ", input$clusterid, " -n ", input$minclustersize, " -k ", input$kmer, " -T ", input$threads, " -B 0.fasta")
-
-    # combine the docker and decona commands
-    command <- paste(decona_command)
-
-    # run the decona pipeline
-    system(command, intern = TRUE)
+    system(decona_command, intern = TRUE)
 
     # Processes results
     # Detect how many barcodes were processed
@@ -164,14 +168,118 @@ server <- shinyServer(function(input, output) {
     # Make rel_abund numeric
     condense$rel_abund <- as.numeric(condense$rel_abund)
 
-    # Display the results
-    output$results <- renderPlotly({
+    # Display the relative abundance plot
+    output$relabres <- renderPlotly({
       ggplotly(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
                  geom_bar(stat = "identity") +
                  theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
                  labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
     })
+
+    # Prepare figure for download
+    output$downloadfig <- downloadHandler(
+      filename = function() {
+        paste("decona_relative_abundance_plot.pdf")
+      },
+      content = function(file) {
+        pdf(file)
+        print(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
+                 geom_bar(stat = "identity") +
+                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
+      dev.off()
+      }
+    )
+    # Prepare blast results for download
+    output$downloadblast <- downloadHandler(
+      filename = function() {
+        paste("decona_blast_results.tsv")
+      },
+      content = function(file) {
+        write.table(sdat, file, sep = "\t", row.names = FALSE)
+      }
+    )
+
+    # Indicate that the process is complete
     removeModal()
+    shinyalert(
+      title = "Completed!",
+      text = "Decona Classifier + Visualizer has finished running! Results can be viewed under the Relative Abundance and BLAST results tabs.",
+      type = "success",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+
+  })
+
+  # EXECUTE DECONA VISUALIZER
+  observeEvent(input$run_viz, {
+    showModal(modalDialog("Running the Decona Visualizer, please be patient...", footer = NULL))
+
+    # Read in the results file
+    decona_results <- read.delim(input$decona_results$datapath, sep = "\t")
+    sdat <- decona_results
+    
+    # Display the blast results
+    output$blastres <- renderDataTable(sdat)
+
+    # Summarize reads per species
+    condense <- sdat %>%
+      group_by(barcode, gensp) %>%
+      summarise(reads = sum(reads)) %>%
+      arrange(desc(reads)) %>%
+      mutate(gensp = factor(gensp, levels = unique(gensp)))
+
+    # Calculate the relative abundance per unique barcode
+    condense$rel_abund <- "fill"
+    for (i in unique(condense$barcode)) {
+      condense$rel_abund[condense$barcode == i] <- condense$reads[condense$barcode == i] / sum(condense$reads[condense$barcode == i])
+    }
+
+    # Make rel_abund numeric
+    condense$rel_abund <- as.numeric(condense$rel_abund)
+
+    # Display the relative abundance plot
+    output$relabres <- renderPlotly({
+      ggplotly(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
+                 geom_bar(stat = "identity") +
+                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
+    })
+
+    # Prepare figure for download
+    output$downloadfig <- downloadHandler(
+      filename = function() {
+        paste("decona_relative_abundance_plot.pdf")
+      },
+      content = function(file) {
+        pdf(file)
+        print(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
+                 geom_bar(stat = "identity") +
+                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
+        dev.off()
+      }
+    )
+    # Prepare blast results for download
+    output$downloadblast <- downloadHandler(
+      filename = function() {
+        paste("decona_blast_results.tsv")
+      },
+      content = function(file) {
+        write.table(sdat, file, sep = "\t", row.names = FALSE)
+      }
+    )
+
+    # Indicate that the process is complete
+    removeModal()
+    shinyalert(
+      title = "Completed!",
+      text = "Decona Visualizer has finished running! Results can be viewed under the Relative Abundance and BLAST results tabs.",
+      type = "success",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
   })
 })
 
