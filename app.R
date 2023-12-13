@@ -13,11 +13,19 @@ is.integer0 <- function(x){
   is.integer(x) && length(x) == 0L
 }
 
+bc_sample <- function(x, y) {
+  x <- x[sample(nrow(x), y, replace = FALSE), ]
+  x <- x[!duplicated(x$gensp), ]
+  x <- length(unique(x$gensp))
+  return(x)
+}
+
 ui <- dashboardPage(
   dashboardHeader(title = "AIN Decona GUI"),
   dashboardSidebar(sidebarMenu(
     menuItem("Decona Classifier + Visualizer", tabName = "decona_class", icon = icon("upload")),
     menuItem("Decona Visualizer", tabName = "decona_viz", icon = icon("upload")),
+    menuItem("Rarefaction Curve", tabName = "rarefaction", icon = icon("chart-line")),
     menuItem("Relative Abundace", tabName = "relab", icon = icon("chart-simple")),
     menuItem("BLAST Results", tabName = "blastres", icon = icon("table")),
     menuItem("Unknown BLAST Hits", tabName = "unknown", icon = icon("question-circle")),
@@ -44,6 +52,15 @@ ui <- dashboardPage(
                 title = "File Upload", status = "primary", solidHeader = TRUE, width = 12,
                 fileInput("decona_results", "Upload Decona results file", accept = c("tsv")),
                 actionButton("run_viz", "Run Decona Visualizer!")))),
+    tabItem(tabName = "rarefaction",
+            fluidRow(
+              box(
+                title = "Rarefaction Curve",
+                status = "primary",
+                solidHeader = TRUE,
+                width = 12,
+                plotlyOutput("rarefaction"),
+                downloadButton("downloadrarefaction", "Download Rarefaction Curve")))),
     tabItem(tabName = "relab",
             fluidRow(
               box(
@@ -88,7 +105,9 @@ server <- shinyServer(function(input, output) {
   # Set large upload size limit (server side)
   options(shiny.maxRequestSize = 70 * 1024^2)
 
-  # EXECUTE DECONA CLASSIFIER + VISUALIZER
+  ##########################################
+  # EXECUTE DECONA CLASSIFIER + VISUALIZER #
+  ##########################################
   observeEvent(input$run, {
     showModal(modalDialog("Running the Decona pipeline, please be patient...", footer = NULL))
 
@@ -147,10 +166,8 @@ server <- shinyServer(function(input, output) {
       names(temp) <- c("reads", "percent_id", "e_value", "genus", "species")
       temp$percent_id[grep("TRUE", is.na(temp$percent_id))] <- 0
 
-      # Add column for gensp
+      # Add column for gensp and barcode
       temp$gensp <- paste(temp$genus, temp$species, sep = "_")
-
-      # Add column for barcode
       temp$barcode <- str_extract(i, "barcode[0-9]+")
 
       # Add to the data frame
@@ -211,10 +228,8 @@ server <- shinyServer(function(input, output) {
         write.table(sdat, file, sep = "\t", row.names = FALSE)
       }
     )
-    #####################################################
-    # Find the rows where BLAST hit returned as unknown #
-    # and reconstruct file name                         #
-    #####################################################
+
+    ### Find Unknown BLAST hits ##
     noid <- data.frame()
 
     # Read in the raw text output
@@ -287,6 +302,56 @@ server <- shinyServer(function(input, output) {
       }
     )
 
+    # Rarefaction analysis + plot
+    # make a vector containing all the reads per unique species by barcode
+    condenser <- as.data.frame(condense)
+    #condenser$gensp <- as.character(condenser$gensp)
+    rare <- c()
+    for (i in 1:length(condense$barcode)) {
+      temp <- rep(condense$gensp[i], condense$reads[i])
+      temp <- data.frame(gensp = temp)
+      temp$barcode <- condense$barcode[i]
+      rare <- rbind(rare, temp)
+    }
+
+    # Randomly sample 1:length(reads) and calculate the number of unique species
+    # for each sample
+    rarefaction <- data.frame()
+    for (i in unique(rare$barcode)) {
+      temp <- rare[rare$barcode == i, ]
+      for (j in seq(1, nrow(temp), by = 10)) {
+        temp2 <- mean(replicate(2, bc_sample(temp, j)))
+        temp2 <- as.data.frame(temp2)
+        temp2$reads <- j
+        temp2$barcode <- i
+        rarefaction <- rbind(rarefaction, temp2)
+      }
+    }
+    names(rarefaction) <- c("unique_species", "reads", "barcode")
+
+    # Plot the rarefaction curve by barcode
+    output$rarefaction <- renderPlotly({
+      ggplotly(ggplot(rarefaction, aes(x = reads, y = unique_species, color = barcode)) +
+                 geom_point() +
+                 geom_line() +
+                 labs(x = "Number of Reads", y = "Number of Unique Species", color = "Barcode"))
+    })
+
+    # Prepare rarefaction curve for download
+    output$downloadrarefaction <- downloadHandler(
+      filename = function() {
+        paste("decona_rarefaction_curve.pdf")
+      },
+      content = function(file) {
+        pdf(file)
+        print(ggplot(rarefaction, aes(x = reads, y = unique_species, color = barcode)) +
+                 geom_point() +
+                 geom_line() +
+                 labs(x = "Number of Reads", y = "Number of Unique Species", color = "Barcode"))
+        dev.off()
+      }
+    )
+
     # Indicate that the process is complete
     removeModal()
     shinyalert(
@@ -298,7 +363,9 @@ server <- shinyServer(function(input, output) {
     )
   })
 
-  # EXECUTE DECONA VISUALIZER
+  #############################
+  # EXECUTE DECONA VISUALIZER #
+  #############################
   observeEvent(input$run_viz, {
     showModal(modalDialog("Running the Decona Visualizer, please be patient...", footer = NULL))
 
