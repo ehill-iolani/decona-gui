@@ -1,6 +1,6 @@
 # Set the base image; pretty sure rocker/shiny was built on Ubuntu 22.04 jammy
 # not gamer, but fixing chip erra erra (like a dj), on arm devices like mac with m1/2 cheetos
-FROM --platform=linux/amd64 rocker/shiny    
+FROM --platform=linux/amd64 rocker/shiny
 
 # My authorship
 LABEL maintainer="ehill@iolani.org"
@@ -15,7 +15,7 @@ RUN apt update
 RUN apt install -y curl git g++ zlib1g-dev make bsdmainutils gawk bcftools libopenblas-base wget nano
 
 # Install R packages
-RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydashboard', 'shinyalert', 'DT'))"
+RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydashboard', 'shinyalert', 'DT', 'ape'))"
 
 # Copy the app to the image
 RUN rm -r /srv/shiny-server/*
