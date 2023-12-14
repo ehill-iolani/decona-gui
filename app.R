@@ -28,7 +28,7 @@ ui <- dashboardPage(
     menuItem("Rarefaction Curve", tabName = "rarefaction", icon = icon("chart-line")),
     menuItem("Relative Abundace", tabName = "relab", icon = icon("chart-simple")),
     menuItem("BLAST Results", tabName = "blastres", icon = icon("table")),
-    menuItem("Unknown BLAST Hits", tabName = "unknown", icon = icon("question-circle")), 
+    menuItem("Unclassified BLAST Hits", tabName = "unknown", icon = icon("question-circle")), 
     menuItem("About", tabName = "about", icon = icon("info-circle"))
   )),
   dashboardBody(tabItems(
@@ -45,13 +45,15 @@ ui <- dashboardPage(
               numericInput("minclustersize", "Minimum Cluster Size", value = 10),
               numericInput("kmer", "Kmer-length", value = 10),
               numericInput("threads", "Threads", value = 2),
-              actionButton("run", "Run Decona Classifier and Visualizer!")))),
+              actionButton("run", "Run Decona Classifier and Visualizer!"),
+              actionButton("dcvhelp", "Help!")))),
     tabItem(tabName = "decona_viz",
             fluidRow(
               box(
                 title = "File Upload", status = "primary", solidHeader = TRUE, width = 12,
                 fileInput("decona_results", "Upload Decona results file", accept = c("tsv")),
-                actionButton("run_viz", "Run Decona Visualizer!")))),
+                actionButton("run_viz", "Run Decona Visualizer!"),
+                actionButton("dvhelp", "Help!")))),
     tabItem(tabName = "rarefaction",
             fluidRow(
               box(
@@ -60,7 +62,8 @@ ui <- dashboardPage(
                 solidHeader = TRUE,
                 width = 12,
                 plotlyOutput("rarefaction"),
-                downloadButton("downloadrarefaction", "Download Rarefaction Curve")))),
+                downloadButton("downloadrarefaction", "Download Rarefaction Curve"),
+                actionButton("rarefactionhelp", "Help!")))),
     tabItem(tabName = "relab",
             fluidRow(
               box(
@@ -69,7 +72,8 @@ ui <- dashboardPage(
                 solidHeader = TRUE,
                 width = 12,
                 plotlyOutput("relabres"),
-                downloadButton("downloadfig", "Download Relative Abundance Plot")))),
+                downloadButton("downloadfig", "Download Relative Abundance Plot"),
+                actionButton("relabhelp", "Help!")))),
     tabItem(tabName = "blastres",
             fluidRow(
               box(
@@ -78,17 +82,19 @@ ui <- dashboardPage(
                 solidHeader = TRUE,
                 width = 12,
                 DTOutput("blastres"),
-                downloadButton("downloadblast", "Download BLAST Results")))),
+                downloadButton("downloadblast", "Download BLAST Results"),
+                actionButton("blastreshelp", "Help!")))),
     tabItem(tabName = "unknown",
             fluidRow(
               box(
-                title = "Unknown BLAST Hits",
+                title = "Unclassified BLAST Hits",
                 status = "primary",
                 solidHeader = TRUE,
                 width = 12,
                 p("This tab will only be populated if the Decona Classifier + Visualizer was run. If the Decona Visualizer was run, re-upload the .fastq/fastq.gz files and run the Decona Classifier + Visualizer."),
                 textOutput("unknownres"),
-                downloadButton("downloadunknown", "Download Unknown BLAST Hits")))),
+                downloadButton("downloadunknown", "Download Unclassified BLAST Hits"),
+                actionButton("unknownhelp", "Help!")))),
     tabItem(tabName = "about",
             fluidRow(
               box(
@@ -433,6 +439,75 @@ server <- shinyServer(function(input, output) {
       title = "Completed!",
       text = "Decona Visualizer has finished running! Results can be viewed under the Relative Abundance and BLAST results tabs.",
       type = "success",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+
+  #################
+  # HELP MESSAGES #
+  #################
+  observeEvent(input$dcvhelp, {
+    shinyalert(
+      title = "Decona Classifier + Visualizer Help",
+      text = "To run the Decona Classifer + Visualizer, please upload your .fastq/.fastq.gz files from your ONT MinION run files and a database .fasta file.
+      The database .fasta file should contain the gene sequences of the species you believe are present in your sample site(s).
+      Set the minimum and maximum amplicon lengths, minimum quality score, cluster percent identity, minimum cluster size, kmer-length, and number of threads.
+      The Decona Classifier + Visualizer will then classify your reads and display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+  observeEvent(input$dvhelp, {
+    shinyalert(
+      title = "Decona Visualizer Help",
+      text = "To run the Decona Visualizer, please upload your Decona results file from a previous Decona Classifer + Visualizer run.
+      The Decona Visualizer will then display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+  observeEvent(input$rarefactionhelp, {
+    shinyalert(
+      title = "Rarefaction Curve Help",
+      text = "The Rarefaction Curve tab displays the number of unique species found in your sample(s) as a function of the number of reads.
+      The Rarefaction Curve tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+  observeEvent(input$relabhelp, {
+    shinyalert(
+      title = "Relative Abundance Help",
+      text = "The Relative Abundance tab displays the relative abundance of each species found in your sample(s).
+      The Relative Abundance tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+  observeEvent(input$blastreshelp, {
+    shinyalert(
+      title = "BLAST Results Help",
+      text = "The BLAST Results tab displays the BLAST results for each species found in your sample(s).
+      The BLAST Results tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.
+      You can download these results by clicking the Download BLAST Results button.
+      You can then upload the downloaded results and reanalyze them in the future using the Decona Visualizer workflow.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+    )
+  })
+  observeEvent(input$unknownhelp, {
+    shinyalert(
+      title = "Unknown BLAST Hits Help",
+      text = "The Unclassified BLAST Hits tab displays the unclassified BLAST hits found in your sample(s).
+      The Unclassified BLAST Hits tab is populated by the Decona Classifier + Visualizer workflow.
+      You can download these unclassified sequences and manually BLAST them to determine their identity by clicking the Download Unclassified BLAST Hits button.",
+      type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
     )
