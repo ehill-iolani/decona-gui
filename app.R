@@ -111,7 +111,7 @@ ui <- dashboardPage(
   ))))
 
 server <- shinyServer(function(input, output) {
-  # Set large upload size limit (server side)
+  # Set large upload size limit (server side)q(0)
   options(shiny.maxRequestSize = 70 * 1024^2)
 
   ##########################################
