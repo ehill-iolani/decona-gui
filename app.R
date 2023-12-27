@@ -20,7 +20,7 @@ bc_sample <- function(x, y) {
   return(x)
 }
 
-ui <- dashboardPage(
+ui <- dashboardPage(skin = "red",
   dashboardHeader(title = "AIN Decona GUI"),
   dashboardSidebar(sidebarMenu(
     menuItem("Decona Classifier + Visualizer", tabName = "decona_class", icon = icon("upload")),
@@ -31,7 +31,36 @@ ui <- dashboardPage(
     menuItem("Unclassified BLAST Hits", tabName = "unknown", icon = icon("question-circle")), 
     menuItem("About", tabName = "about", icon = icon("info-circle"))
   )),
-  dashboardBody(tabItems(
+  # Formatting to make it iolani colors
+  dashboardBody(tags$style(HTML("
+  .box.box-solid.box-primary>.box-header {
+    color:#fff;
+    background:#000000
+  }
+
+  .box.box-solid.box-primary {
+    border-bottom-color:#000000;
+    border-left-color:#000000;
+    border-right-color:#000000;
+    border-top-color:#000000;
+  }
+
+  .box.box-primary>.box-header {
+    color:#000000;
+    background:#fff
+  }
+
+  .box.box-primary {
+    border-bottom-color:#000000;
+    border-left-color:#000000;
+    border-right-color:#000000;
+    border-top-color:#000000;
+  }
+  
+  .skin-red .main-sidebar {
+    background-color: #000000;
+  }")),
+  tabItems(
     tabItem(tabName = "decona_class",
             fluidRow(
             box(
@@ -290,7 +319,7 @@ server <- shinyServer(function(input, output) {
     fastas <- fastas[names(fastas) %in% noid$filename]
 
     # add the matching barcode from noid to the names(fastas) based on noid$filename
-    for (i in 1:length(names(fastas))) {
+    for (i in 1:length(names(fastas))) { # nolint
       index <- noid$filename %in% names(fastas)[i]
       name <- paste(noid$barcode[index], names(fastas)[i], sep = "_")
       names(fastas)[i] <- name
@@ -316,7 +345,7 @@ server <- shinyServer(function(input, output) {
     condenser <- as.data.frame(condense)
     #condenser$gensp <- as.character(condenser$gensp)
     rare <- c()
-    for (i in 1:length(condense$barcode)) {
+    for (i in 1:length(condense$barcode)) { # nolint
       temp <- rep(condense$gensp[i], condense$reads[i])
       temp <- data.frame(gensp = temp)
       temp$barcode <- condense$barcode[i]
@@ -457,6 +486,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
   observeEvent(input$dvhelp, {
@@ -467,6 +497,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
   observeEvent(input$rarefactionhelp, {
@@ -477,6 +508,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
   observeEvent(input$relabhelp, {
@@ -487,6 +519,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
   observeEvent(input$blastreshelp, {
@@ -499,6 +532,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
   observeEvent(input$unknownhelp, {
@@ -510,6 +544,7 @@ server <- shinyServer(function(input, output) {
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
     )
   })
 })
