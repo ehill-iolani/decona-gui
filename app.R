@@ -479,10 +479,11 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$dcvhelp, {
     shinyalert(
       title = "Decona Classifier + Visualizer Help",
-      text = "To run the Decona Classifer + Visualizer, please upload your .fastq/.fastq.gz files from your ONT MinION run files and a database .fasta file.
-      The database .fasta file should contain the gene sequences of the species you believe are present in your sample site(s).
-      Set the minimum and maximum amplicon lengths, minimum quality score, cluster percent identity, minimum cluster size, kmer-length, and number of threads.
-      The Decona Classifier + Visualizer will then classify your reads and display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.",
+      html = TRUE,
+      text = "To run the Decona Classifer + Visualizer, <b>please upload your .fastq/.fastq.gz files from your ONT MinION run and a database .fasta file.</b><br><br>
+      The database .fasta file should contain the gene sequences of the species you believe are present in your sample site(s).<br><br>
+      Set the minimum and maximum amplicon lengths, minimum quality score, cluster percent identity, minimum cluster size, kmer-length, and number of threads.<br><br>
+      <b>The Decona Classifier + Visualizer will then classify your reads and display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.</b>",
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
@@ -492,8 +493,9 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$dvhelp, {
     shinyalert(
       title = "Decona Visualizer Help",
-      text = "To run the Decona Visualizer, please upload your Decona results file from a previous Decona Classifer + Visualizer run.
-      The Decona Visualizer will then display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.",
+      html = TRUE,
+      text = "To run the Decona Visualizer, please <b>upload your Decona results file from a previous Decona Classifer + Visualizer run.</b><br><br>
+      <b>The Decona Visualizer will then display the results under the Rarefaction Curve, Relative Abundance and BLAST results tabs.</b>",
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
@@ -503,7 +505,8 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$rarefactionhelp, {
     shinyalert(
       title = "Rarefaction Curve Help",
-      text = "The Rarefaction Curve tab displays the number of unique species found in your sample(s) as a function of the number of reads.
+      html = TRUE,
+      text = "<b>The Rarefaction Curve tab displays the number of unique species found in your sample(s) as a function of the number of reads.</b><br><br>
       The Rarefaction Curve tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.",
       type = "info",
       showConfirmButton = TRUE,
@@ -514,7 +517,8 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$relabhelp, {
     shinyalert(
       title = "Relative Abundance Help",
-      text = "The Relative Abundance tab displays the relative abundance of each species found in your sample(s).
+      html = TRUE,
+      text = "<b>The Relative Abundance tab displays the relative abundance of each species found in your sample(s).</b><br><br>
       The Relative Abundance tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.",
       type = "info",
       showConfirmButton = TRUE,
@@ -525,9 +529,10 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$blastreshelp, {
     shinyalert(
       title = "BLAST Results Help",
-      text = "The BLAST Results tab displays the BLAST results for each species found in your sample(s).
-      The BLAST Results tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.
-      You can download these results by clicking the Download BLAST Results button.
+      html = TRUE,
+      text = "<b>The BLAST Results tab displays the BLAST results for each species found in your sample(s).</b><br><br>
+      The BLAST Results tab is populated by the Decona Classifier + Visualizer and Decona Visualizer workflows.<br><br>
+      <b>You can download these results by clicking the Download BLAST Results button.</b><br><br>
       You can then upload the downloaded results and reanalyze them in the future using the Decona Visualizer workflow.",
       type = "info",
       showConfirmButton = TRUE,
@@ -538,9 +543,10 @@ server <- shinyServer(function(input, output) {
   observeEvent(input$unknownhelp, {
     shinyalert(
       title = "Unknown BLAST Hits Help",
-      text = "The Unclassified BLAST Hits tab displays the unclassified BLAST hits found in your sample(s).
-      The Unclassified BLAST Hits tab is populated by the Decona Classifier + Visualizer workflow.
-      You can download these unclassified sequences and manually BLAST them to determine their identity by clicking the Download Unclassified BLAST Hits button.",
+      html = TRUE,
+      text = "<b>The Unclassified BLAST Hits tab displays the unclassified BLAST hits found in your sample(s).</b><br><br>
+      The Unclassified BLAST Hits tab is populated by the Decona Classifier + Visualizer workflow.<br><br>
+      <b>You can download these unclassified sequences and manually BLAST them to determine their identity by clicking the Download Unclassified BLAST Hits button.</b>",
       type = "info",
       showConfirmButton = TRUE,
       confirmButtonText = "OK",
