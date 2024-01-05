@@ -447,7 +447,7 @@ server <- shinyServer(function(input, output) {
         pdf(file)
         print(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
                  geom_bar(stat = "identity") +
-                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 theme(axis.text.x = element_text(angle = 0, hjust = .5)) +
                  labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
         dev.off()
       }
