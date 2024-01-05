@@ -252,7 +252,7 @@ server <- shinyServer(function(input, output) {
         pdf(file)
         print(ggplot(condense, aes(x = barcode, y = rel_abund, fill = gensp)) +
                  geom_bar(stat = "identity") +
-                 theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+                 theme(axis.text.x = element_text(angle = 0, hjust = .5)) +
                  labs(x = "Barcode", y = "Relative Abundance", fill = "Species"))
       dev.off()
       }
@@ -280,17 +280,18 @@ server <- shinyServer(function(input, output) {
         temp <- dat[, c(1, 2, 4, 8, 11, 12)]
       } else {
         dat <- dat[-c(grep("TRUE", is.na(dat$V1))), ]
-        temp <- dat[, c(1, 2, 4, 8, 11, 12)]}
-        # Rename the columns
-        names(temp) <- c("reads", "tag", "percent_id", "e_value", "genus", "species")
-        temp$percent_id[grep("TRUE", is.na(temp$percent_id))] <- 0
+        temp <- dat[, c(1, 2, 4, 8, 11, 12)]
+      }
+      # Rename the columns
+      names(temp) <- c("reads", "tag", "percent_id", "e_value", "genus", "species")
+      temp$percent_id[grep("TRUE", is.na(temp$percent_id))] <- 0
 
-        # Add columns for gensp, barcode
-        temp$gensp <- paste(temp$genus, temp$species, sep = "_")
-        temp$barcode <- str_extract(i, "barcode[0-9]+")
+      # Add columns for gensp, barcode
+      temp$gensp <- paste(temp$genus, temp$species, sep = "_")
+      temp$barcode <- str_extract(i, "barcode[0-9]+")
 
-       # Add to the data frame
-        noid <- rbind(noid, temp)
+      # Add to the data frame
+      noid <- rbind(noid, temp)
     }
 
     noid <- as.data.frame(noid)
