@@ -64,9 +64,18 @@ ui <- dashboardPage(skin = "red",
     tabItem(tabName = "decona_class",
             fluidRow(
             box(
-              title = "File Upload", status = "primary", solidHeader = TRUE, width = 12,
-              fileInput("fastqs", "Input fastq file directories", accept = c("fastq", "fastq.gz"), multiple = TRUE),
+              title = "Fastq Upload", status = "primary", solidHeader = TRUE, width = 12,
+              fileInput("fastqs", "Input fastq files", accept = c("fastq", "fastq.gz"), multiple = TRUE),
+              actionButton("fastqhelp", "Help!")),
+            box(
+              title = "Database Selection", status = "primary", solidHeader = TRUE, width = 12,
+              selectInput("preloadedb", "Select a preloaded database (if you do not have one to upload)",
+                          choices = c("I am providing my own database file", "Oahu Stream Fish", "Oahu Stream Decapod"),
+                          selected = "I have provided my own"),
               fileInput("database", "Upload database .fasta file", accept = c("fasta")),
+              actionButton("dbhelp", "Help!")),
+            box(
+              title = "Decona Parameters", status = "primary", solidHeader = TRUE, width = 12,
               numericInput("lowerlength", "Minimum amplicon length", value = 170),
               numericInput("upperlength", "Maximum amplicon length", value = 300),
               numericInput("quality", "Minimum Quality Score", value = 10),
@@ -74,6 +83,9 @@ ui <- dashboardPage(skin = "red",
               numericInput("minclustersize", "Minimum Cluster Size", value = 10),
               numericInput("kmer", "Kmer-length", value = 10),
               numericInput("threads", "Threads", value = 2),
+              actionButton("deconahelp", "Help!")),
+            box(
+              title = "Run Workflow", status = "primary", solidHeader = TRUE, width = 12,
               actionButton("run", "Run Decona Classifier and Visualizer!"),
               actionButton("dcvhelp", "Help!")))),
     tabItem(tabName = "decona_viz",
@@ -173,8 +185,15 @@ server <- shinyServer(function(input, output) {
       system("for i in */; do cd $i; for j in *; do mv $j ${j}.fastq; done; cd ..; done")
     }
 
-    # Move the database file to the input directory
-    file.copy(input$database$datapath, file.path("/home/processing"))
+    # Check the db selection and preps db accordingly
+    if (input$preloadedb == "I am providing my own database file") {
+      # Move the database file to the input directory
+      file.copy(input$database$datapath, file.path("/home/processing"))
+    } else if (input$preloadedb == "Oahu Stream Fish") {
+      file.copy("/home/data/mifish_streamdb.fasta", "/home/processing/0.fasta")
+    } else if (input$preloadedb == "Oahu Stream Decapod") {
+      file.copy("/home/data/mideca_streamdb.fasta", "/home/processing/0.fasta")
+    }
 
     # prep command and execute pipeline
     decona_command <- paste0("conda run -n decona decona -f -l ", input$lowerlength, " -m ", input$upperlength, " -q ", input$quality, " -c ", input$clusterid, " -n ", input$minclustersize, " -k ", input$kmer, " -T ", input$threads, " -B 0.fasta")
@@ -302,7 +321,7 @@ server <- shinyServer(function(input, output) {
     noid$gensp[is.na(noid$e_value)] <- "unclassified"
     noid <- noid[noid$gensp == "unclassified", ]
 
-    # Add catch statment there are no unclassified BLAST hits
+    # Add catch statment if there are no unclassified BLAST hits
     if (nrow(noid) == 0) {
       output$unknownres <- renderText({
         paste("No clusters returned an unclassified status!")
@@ -488,6 +507,47 @@ server <- shinyServer(function(input, output) {
   #################
   # HELP MESSAGES #
   #################
+  observeEvent(input$fastqhelp, {
+    shinyalert(
+      title = "Fastq Upload Help",
+      html = TRUE,
+      text = "<b>Please upload your .fastq/.fastq.gz files from your ONT MinION run and a database .fasta file.</b><br><br>
+      Following the sequencing run, make sure to collected all of the relevant .fastq/.fastq.gz files from the barcode directories.<br><br>
+      Once you have collected all of the relevant .fastq/.fastq.gz files, upload them here.<br><br>",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
+    )
+  })
+
+  observeEvent(input$dbhelp, {
+    shinyalert(
+      title = "Database Selection Help",
+      html = TRUE,
+      text = "<b>The database .fasta file should contain the gene sequences of the species you believe are present in your sample site(s).</b><br><br>
+      If you do not have a database .fasta file, you can select one of the preloaded databases.<br><br>
+      Make sure to select the correct database for your amplicon type.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
+    )
+  })
+
+  observeEvent(input$deconahelp, {
+    shinyalert(
+      title = "Decona Parameters Help",
+      html = TRUE,
+      text = "For most workflows, the default parameters should work, however, <b>make sure to adjust the upper and lower limits of the amplicon length accordingly.</b><br><br>
+      Set the minimum and maximum amplicon lengths, minimum quality score, cluster percent identity, minimum cluster size, kmer-length, and number of threads.",
+      type = "info",
+      showConfirmButton = TRUE,
+      confirmButtonText = "OK",
+      confirmButtonCol = "#000000"
+    )
+  })
+
   observeEvent(input$dcvhelp, {
     shinyalert(
       title = "Decona Classifier + Visualizer Help",
