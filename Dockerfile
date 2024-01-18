@@ -21,6 +21,7 @@ RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydash
 RUN rm -r /srv/shiny-server/*
 RUN git clone https://github.com/ehill-iolani/decona-gui.git
 RUN cp -r decona-gui/* /srv/shiny-server/
+RUN mkdir /home/data
 RUN cp -r decona-gui/mideca_streamdb.fasta /home/data/
 RUN cp -r decona-gui/mifish_streamdb.fasta /home/data/
 RUN rm -r decona-gui
@@ -44,8 +45,7 @@ SHELL ["mamba", "run", "-n", "decona", "/bin/bash", "-c"]
 RUN mamba init && \
     mamba install -y -c bioconda blast=2.11.0 && \
     mamba install -y pandas=1.4.1 && \
-    echo "mamba activate decona" >> ~/.bashrc && \
-    mkdir /home/data
+    echo "mamba activate decona" >> ~/.bashrc
 
 # Clean up installation
 RUN rm miniconda.sh
