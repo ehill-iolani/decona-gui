@@ -28,6 +28,7 @@ ui <- dashboardPage(skin = "red",
     menuItem("Rarefaction Curve", tabName = "rarefaction", icon = icon("chart-line")),
     menuItem("Relative Abundance", tabName = "relab", icon = icon("chart-simple")),
     menuItem("BLAST Results", tabName = "blastres", icon = icon("table")),
+    menuItem("Overlapping taxa", tabName = "overlap", icon = icon("table")),
     menuItem("Unclassified BLAST Hits", tabName = "unknown", icon = icon("question-circle")),
     menuItem("About", tabName = "about", icon = icon("info-circle"))
   )),
@@ -153,7 +154,7 @@ ui <- dashboardPage(skin = "red",
 
 server <- shinyServer(function(input, output) {
   # Set large upload size limit (server side)q(0)
-  options(shiny.maxRequestSize = 70 * 1024^2)
+  options(shiny.maxRequestSize = 250 * 1024^2)
 
   ##########################################
   # EXECUTE DECONA CLASSIFIER + VISUALIZER #
