@@ -422,6 +422,9 @@ server <- shinyServer(function(input, output) {
       }
     )
 
+    # Remove the processing directory
+    system("rm -r /home/processing")
+
     # Indicate that the process is complete
     removeModal()
     shinyalert(
