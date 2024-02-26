@@ -19,12 +19,12 @@ RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydash
 
 # Copy the app to the image
 RUN rm -r /srv/shiny-server/*
-RUN git clone https://github.com/ehill-iolani/decona-gui.git
-RUN cp -r decona-gui/* /srv/shiny-server/
+# RUN git clone https://github.com/ehill-iolani/decona-gui.git
+COPY app.R /srv/shiny-server/
 RUN mkdir /home/data
-RUN cp -r decona-gui/mideca_streamdb.fasta /home/data/
-RUN cp -r decona-gui/mifish_streamdb.fasta /home/data/
-RUN rm -r decona-gui
+COPY mideca_streamdb.fasta /home/data/
+COPY mifish_streamdb.fasta /home/data/
+# RUN rm -r decona-gui
 
 # Conda/Mamba installation
 RUN cd tmp
