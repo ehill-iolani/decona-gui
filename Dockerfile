@@ -15,16 +15,14 @@ RUN apt update
 RUN apt install -y curl git g++ zlib1g-dev make bsdmainutils gawk bcftools libopenblas-base wget nano
 
 # Install R packages
-RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydashboard', 'shinyalert', 'DT', 'ape'))"
+RUN R -e "install.packages(c('stringr', 'dplyr', 'ggplot2', 'plotly', 'shinydashboard', 'shinyalert', 'DT', 'ape', 'htmlwidgets'))"
 
 # Copy the app to the image
 RUN rm -r /srv/shiny-server/*
-# RUN git clone https://github.com/ehill-iolani/decona-gui.git
 COPY app.R /srv/shiny-server/
 RUN mkdir /home/data
 COPY mideca_streamdb.fasta /home/data/
 COPY mifish_streamdb.fasta /home/data/
-# RUN rm -r decona-gui
 
 # Conda/Mamba installation
 RUN cd tmp
@@ -41,10 +39,12 @@ RUN sed -i -e "s/\r$//" /home/github/decona/install/install.sh
 RUN bash /home/github/decona/install/install.sh
 SHELL ["mamba", "run", "-n", "decona", "/bin/bash", "-c"]
 
-# Install decona_plus
+# Add BLAST and medaka to decona
 RUN mamba init && \
     mamba install -y -c bioconda blast=2.11.0 && \
     mamba install -y pandas=1.4.1 && \
+    mamba install -y -c bioconda -c conda-forge bcftools=1.11 samtools=1.19.2 && \
+    pip install medaka pyabpoa  && \
     echo "mamba activate decona" >> ~/.bashrc
 
 # Clean up installation
