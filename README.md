@@ -10,6 +10,10 @@ Build the docker image
 ```
 docker build -t decona-gui:latest .
 ```
+You can also pull the docker image from dockerhub
+```
+docker pull ethill/decona-gui:latest
+```
 Run the docker image as a container
 ```
 docker run --name=decona-gui --rm -d -p 8080:3838 decona-gui:latest
